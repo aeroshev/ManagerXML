@@ -8,6 +8,8 @@
 #include <memory>
 #include <unordered_map>
 #include <utility>
+#include <vector>
+#include <sstream>
 #include "../pugixml/pugixml.hpp"
 
 namespace xml_rd {
@@ -16,11 +18,6 @@ namespace xml_rd {
         write,
         erase,
         change
-    };
-
-    enum type_object {
-        employ,
-        department
     };
 
     struct XMLEmploy {
@@ -52,7 +49,7 @@ namespace xml_rd {
 
     private:
         static inline void fill_employ(XMLEmploy *, std::istream &);
-        // TODO dynamic count abg salary and qty employee
+        // TODO dynamic count avg salary and qty employee
         static inline void fill_depart(XMLDepart *, std::istream &);
     };
 
@@ -61,18 +58,19 @@ namespace xml_rd {
         explicit ManagerXML(size_t size_cache = 1024);
         ~ManagerXML() = default;
 
-        void open_file(const std::string &);
+        void load_file(const std::string &path = "");
 
         // TODO Rewrite to iter
-        void show_tree(std::ostream &) const;
+        void show_tree(std::ostream &out = std::cout) const;
         void put(const XMLBlock &);
         void save();
         void rollback();
         void step_back();
-
+        bool exist(std::string&);
     private:
         pugi::xml_document xml_doc;
         std::unordered_map<unsigned long, XMLBlock> cache_;
+        std::unordered_map<std::string, std::vector<XMLEmploy> > tree;
         size_t size_cache;
         unsigned long pointer_last_record;
     };
@@ -84,10 +82,6 @@ namespace xml_rd {
 
         void start();
     private:
-        static inline void show_menu();
-        static inline void show_choice();
-        void insert(type_object);
-        type_operation current_choice;
         std::shared_ptr<ManagerXML> manager;
     };
 }

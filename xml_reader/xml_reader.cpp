@@ -43,29 +43,51 @@ namespace xml_rd
     }
 //-----------------------------------------------ManagerXML-------------------------------------------------------------
     ManagerXML::ManagerXML(size_t size_cache):
-    cache_(size_cache),
     size_cache(size_cache),
+    cache_(1024),
     pointer_last_record(0)
     {}
 
-    void ManagerXML::open_file(const std::string &path = "")
+    void ManagerXML::load_file(const std::string &path)
     {
         if (!xml_doc.load_file(path.c_str()))
             throw std::invalid_argument("Can't read this file");
+
+        pugi::xml_node departments = xml_doc.child("departments");
+        for (auto department = departments.first_child(); department; department = department.next_sibling())
+        {
+            auto dep_name = department.attribute("name").value();
+            pugi::xml_node employments = department.child("employments");
+
+            for (auto employment = employments.first_child(); employment; employment = employment.next_sibling())
+            {
+                XMLEmploy block;
+                block.surname = employment.child("surname").child_value();
+                block.name = employment.child("name").child_value();
+                block.middleName = employment.child("middleName").child_value();
+                block.function = employment.child("function").child_value();
+                block.salary = std::stoi(employment.child("salary").child_value());
+                tree[dep_name].push_back(block);
+            }
+
+        }
     }
 
-    void ManagerXML::show_tree(std::ostream &out = std::cout) const
+    void ManagerXML::show_tree(std::ostream &out) const
     {
-        pugi::xml_node departments = xml_doc.child("departments");
-        for (auto department = departments.first_child(); department; department = department.next_sibling()) {
-            std::cout << "Departments name -> " << department.attribute("name").value() << '\n';
-            pugi::xml_node employments = department.child("employments");
-            for (auto employment = employments.first_child(); employment; employment = employment.next_sibling()) {
-                for (auto attr = employment.first_child(); attr; attr = attr.next_sibling()) {
-                    std::cout << '\t' << attr.name() << " -> " << attr.child_value() << '\n';
-                }
-                std::cout << '\n';
+        for (const auto& dep : tree)
+        {
+            out << "Departament name -> " << dep.first << '\n';
+            for (const auto& empl : dep.second)
+            {
+                out << '\t' << "Surname -> " << empl.surname << '\n';
+                out << '\t' << "Name -> " << empl.name << '\n';
+                out << '\t' << "Middle name -> " << empl.middleName << '\n';
+                out << '\t' << "Function -> " << empl.function << '\n';
+                out << '\t' << "Salary -> " << empl.salary << '\n';
+                out << '\n';
             }
+            out << '\n';
         }
     }
 
@@ -79,9 +101,21 @@ namespace xml_rd
 
     void ManagerXML::save()
     {
-        for (auto &pointer : cache_) {
-            // TODO
+        for (auto &pointer : cache_)
+        {
+            switch (pointer.second.type)
+            {
+                case type_operation::write:
+                    continue;
+                case type_operation::erase:
+                    continue;
+                case type_operation::change:
+                    continue;
+                default:
+                    continue;
+            }
         }
+        pointer_last_record = 0;
     }
 
     void ManagerXML::rollback()
@@ -97,6 +131,14 @@ namespace xml_rd
             pointer_last_record -= 1;
         }
     }
+
+    bool ManagerXML::exist(std::string &name)
+    {
+        bool result = true;
+        if (tree.end() == tree.find(name))
+            result = false;
+        return result;
+    }
 //----------------------------------------------------Interface---------------------------------------------------------
     Interface::Interface(std::shared_ptr<ManagerXML> manager):
     manager(std::move(manager))
@@ -109,70 +151,92 @@ namespace xml_rd
 
     void Interface::start()
     {
-        int choice = 1;
-        while (choice != 0) {
-            show_menu();
-            std::cin >> choice;
-
-            switch (choice) {
-                case 0:
-                    break;
-                case 1:
-                    current_choice = type_operation::write;
-
-                    break;
-                case 2:
-                    current_choice = type_operation::erase;
-                    break;
-                case 3:
-                    current_choice = type_operation::change;
-                    break;
-                case 4:
-
-                    break;
-                case 5:
-                    break;
-                case 6:
-                    manager->show_tree();
-                    break;
-                default:
-                    std::cerr << "Try choose from 0 to 6" << '\n';
-                    break;
-            }
-        }
-    }
-
-    inline void Interface::show_menu()
-    {
-        std::cout << "1. Insert" << '\n';
-        std::cout << "2. Delete" << '\n';
-        std::cout << "3. Change" << '\n';
-        std::cout << "4. Step back" << '\n';
-        std::cout << "5. Rollback" << '\n';
-        std::cout << "6. Show tree" << '\n';
-        std::cout << "0. Quit" << '\n';
-    }
-
-    inline void Interface::show_choice()
-    {
-        std::cout << "1. Department" << '\n';
-        std::cout << "2. Employ" << '\n';
-    }
-
-    void Interface::insert(type_object object)
-    {
-
-        switch (object)
+        unsigned int depth = 0;
+        std::string command, op, dep, up;
+        while(true)
         {
-            case type_object::employ:
-                auto pointer = std::move(CombineBlock::insert_employ());
+            std::cout << "Choose department or quit" << '\n';
+            getline(std::cin, command);
 
+            op = command.substr(0, command.find(' '));
+            if (op == "q")
                 break;
-            case type_object::department:
+            if (op == "sw")
+            {
+                manager->show_tree();
+                continue;
+            }
+            if (op == "sb")
+            {
+                manager->step_back();
+                continue;
+            }
+            if (op == "rb")
+            {
+                manager->rollback();
+                continue;
+            }
+            if (op == "ad")
+            {
+                continue;
+            }
+            if (op == "sv")
+            {
+                manager->save();
+                continue;
+            }
 
-            default:
+            dep = command.substr(4);
+            dep = dep.substr(0, dep.length() - 1);
+
+            if (op == "cd")
+            {
+                up = command.substr(3);
+                if (up == "..")
+                    if (depth == 0)
+                        std::cout << "We're the top tree" << '\n';
+                    else
+                        depth--;
+                else
+                    if (depth == 1)
+                        std::cout << "We're the bottom tree" << '\n';
+                    else
+                        depth++;
+            }
+            else if (op == "rm")
+            {
+                switch (depth)
+                {
+                    case 0:
+                        // delete department
+                    case 1:
+                        // delete employ
+                    default:
+                        std::cout << "Depth incorrect" << '\n';
+                }
+            }
+            else if (op == "ch")
+            {
+                std::string cur_name = dep.substr(0, dep.find(' '));
+                cur_name = cur_name.substr(0, cur_name.length() - 1);
+                std::string new_name = dep.substr(dep.find(' '));
+                new_name = new_name.substr(2, new_name.length());
+
+                switch (depth)
+                {
+                    case 0:
+                        // change department
+                    case 1:
+                        // change employ
+                    default:
+                        std::cout << "Depth incorrect" << '\n';
+                }
+
+                std::cout << cur_name << '\n';
+                std::cout << new_name << '\n';
+            }
+            else
+                std::cout << "Can't recognise command" <<'\n';
         }
     }
-
-
 }
