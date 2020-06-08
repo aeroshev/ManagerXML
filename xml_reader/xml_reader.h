@@ -9,7 +9,6 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-#include <sstream>
 #include "../pugixml/pugixml.hpp"
 
 namespace xml_rd {
@@ -28,29 +27,16 @@ namespace xml_rd {
         unsigned int salary;
     };
 
-    struct XMLDepart {
-        std::string name;
-        unsigned int qty_employ;
-        double avg_salary;
-    };
-
     struct XMLBlock {
         type_operation type;
-        XMLEmploy *employ;
-        XMLDepart *depart;
+        XMLEmploy employ;
+        std::string depart;
     };
 
-    class CombineBlock {
-    public:
-        CombineBlock() = default;
-        ~CombineBlock() = default;
+    struct CombineBlock {
         // TODO Memory handle
-        static std::unique_ptr<XMLBlock> insert_employ(std::istream &);
-
-    private:
-        static inline void fill_employ(XMLEmploy *, std::istream &);
-        // TODO dynamic count avg salary and qty employee
-        static inline void fill_depart(XMLDepart *, std::istream &);
+        static std::unique_ptr<XMLBlock> create_employ(std::istream &, const std::string&);
+        static std::unique_ptr<XMLBlock> create_department(std::istream &);
     };
 
     class ManagerXML {
@@ -62,7 +48,7 @@ namespace xml_rd {
 
         // TODO Rewrite to iter
         void show_tree(std::ostream &out = std::cout) const;
-        void put(const XMLBlock &);
+        void put(std::unique_ptr<XMLBlock>);
         void save();
         void rollback();
         void step_back();
@@ -83,5 +69,6 @@ namespace xml_rd {
         void start();
     private:
         std::shared_ptr<ManagerXML> manager;
+        std::string current_department;
     };
 }

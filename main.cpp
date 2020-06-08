@@ -13,8 +13,6 @@ int main() {
         return 1;
     }
 
-    manager->show_tree();
-
     auto interface = xml_rd::Interface(manager);
     interface.start();
 
