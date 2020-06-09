@@ -62,7 +62,7 @@ namespace xml_rd
                 block.middleName = employment.child("middleName").child_value();
                 block.function = employment.child("function").child_value();
                 block.salary = std::stoi(employment.child("salary").child_value());
-                tree[dep_name].push_back(boost::new_clone(block));
+                tree[dep_name].insert(block);
             }
 
         }
@@ -70,42 +70,70 @@ namespace xml_rd
 
     void ManagerXML::show_tree(std::ostream &out) const
     {
-        unsigned int count_empl = 0;
         double avg_sal = 0;
         for (const auto& dep : tree)
         {
-            count_empl = 0;
             avg_sal = 0;
             out << "Departament name -> " << dep.first << '\n';
+            std::cout << "Count of employee in department -> " << dep.second.size() << '\n';
             for (const auto & empl : dep.second)
             {
-                auto *employ = dynamic_cast<const XMLEmploy*>(&empl);
-                out << '\t' << "Surname -> " << employ->surname << '\n';
-                out << '\t' << "Name -> " << employ->name << '\n';
-                out << '\t' << "Middle name -> " << employ->middleName << '\n';
-                out << '\t' << "Function -> " << employ->function << '\n';
-                out << '\t' << "Salary -> " << employ->salary << '\n';
+                out << '\t' << "Surname -> " << empl.surname << '\n';
+                out << '\t' << "Name -> " << empl.name << '\n';
+                out << '\t' << "Middle name -> " << empl.middleName << '\n';
+                out << '\t' << "Function -> " << empl.function << '\n';
+                out << '\t' << "Salary -> " << empl.salary << '\n';
                 out << '\n';
-                count_empl++;
-//                avg_sal += empl.salary;
+                avg_sal += empl.salary;
             }
-            avg_sal /= count_empl;
-            std::cout << "Count of employee in department -> " << count_empl << '\n';
+            avg_sal /= dep.second.size();
             std::cout << "Average salary in department -> " << std::round(avg_sal * 100) / 100 << '\n';
             out << '\n';
+            std::cout << std::is_base_of<std::unordered_set<XMLEmploy>, decltype(dep.second)>::value << '\n';
         }
-    }
 
-//    void ManagerXML::put(std::unique_ptr<XMLBlock> box)
-//    {
+    }
+    // TODO Safe changes in cache
+    void ManagerXML::put(std::unique_ptr<XMLBlock> box)
+    {
 //        if (pointer_last_record < size_cache)
-//            cache_.insert(std::make_pair(pointer_last_record++, *box));
+//        {
+//            cache_.push_back(*box);
+//            switch (box->type)
+//            {
+//                case type_operation::write:
+//                    if (box->employ != nullptr)
+//                        tree[box->depart].insert(*box->employ);
+//                    else
+//                        tree.insert(std::make_pair(box->depart, std::unordered_set<XMLEmploy>()));
+//                    break;
+//                case type_operation::erase:
+//                    if (box->employ != nullptr)
+//                        tree[box->depart].erase(*box->employ);
+//                    else
+//                        tree.erase(box->depart);
+//                    break;
+//                case type_operation::change:
+//                    if (box->employ != nullptr)
+//                    {
+//                        auto ptr = tree[box->depart].find(*box->employ);
+//                    }
+//                    else
+//                    {
+//                        auto nodeHandler = tree.extract(box->depart);
+//                        nodeHandler.key() = box->depart;
+//                        tree.insert(std::move(nodeHandler));
+//                    }
+//                    default:
+//                        std::cout << "Something wrong" << '\n';
+//            }
+//        }
 //        else
 //            throw std::out_of_range("Cache is full");
-//    }
-//
-////    void ManagerXML::save()
-////    {
+    }
+
+//    void ManagerXML::save()
+//    {
 //        for (auto &pointer : cache_)
 //        {
 //            switch (pointer.second.type)
@@ -121,7 +149,7 @@ namespace xml_rd
 //            }
 //        }
 //        pointer_last_record = 0;
-//    }
+    }
 //
 //    void ManagerXML::rollback()
 //    {
@@ -273,4 +301,4 @@ namespace xml_rd
 //                std::cout << "Can't recognise command" <<'\n';
 //        }
 //    }
-}
+

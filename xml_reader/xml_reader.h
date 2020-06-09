@@ -7,11 +7,14 @@
 #include <string>
 #include <memory>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 #include <list>
 #include <boost/ptr_container/ptr_vector.hpp>
 #include "../pugixml/pugixml.hpp"
+
+
 
 namespace xml_rd {
 
@@ -21,78 +24,47 @@ namespace xml_rd {
         change
     };
 
-    class XMLBase {
-    public:
-        virtual void nothing() = 0;
-        XMLBase() = default;
-        virtual ~XMLBase() = default;
-        virtual XMLBase* clone() const = 0;
-        virtual std::string show() const = 0;
-    };
-
-    class XMLEmploy: public XMLBase {
-    public:
-        XMLEmploy() = default;
-
-        XMLEmploy(const XMLEmploy& pBase)
-        {
-            surname = pBase.surname;
-            name = pBase.name;
-            middleName = pBase.middleName;
-            function = pBase.function;
-            salary = pBase.salary;
-        }
-
-        XMLEmploy * clone() const override
-        {
-            return new XMLEmploy(*this);
-        }
-
-        std::string show() const override
-        {
-            return surname;
-        }
-
+    struct XMLEmploy {
         std::string surname;
         std::string name;
         std::string middleName;
         std::string function;
         unsigned int salary;
 
-        void nothing() override
+        bool operator==(const XMLEmploy& compare) const noexcept
         {
-            std::cout << "Nothing" << '\n';
+            return (surname == compare.surname &&
+                    name == compare.name &&
+                    middleName == compare.middleName &&
+                    function == compare.function &&
+                    salary == compare.salary);
+        }
+
+        size_t operator()(const XMLEmploy& hashPoint) const noexcept
+        {
+            size_t hash = std::hash<std::string>{}(surname);
+            hash += std::hash<std::string>{}(name);
+            hash += std::hash<std::string>{}(middleName);
+            return hash;
         }
     };
 
-    class XMLBlock: public XMLBase {
-    public:
-        XMLBlock() = default;
+
+    struct XMLBlock {
         type_operation type;
-        XMLEmploy employ;
+        std::unique_ptr<XMLEmploy> employ;
         std::string depart;
 
-        XMLBlock* clone() const override
+        bool operator== (const XMLBlock& compare) const noexcept
         {
-            return new XMLBlock(*this);
+            return (type == compare.type && employ == compare.employ && depart == compare.depart);
         }
 
-        std::string show() const override
-        {
-            std::string a = "fuck off";
-            return a;
-        }
-
-        void nothing() override
-        {
-            std::cout << "Nothing" << '\n';
-        }
     };
 
     struct CombineBlock {
         // TODO Memory handle
-        static std::unique_ptr<XMLBase> create_employ(std::istream &, const std::string&);
-        static std::unique_ptr<XMLBlock> create_department(std::istream &);
+
     };
 
     class ManagerXML {
@@ -111,8 +83,8 @@ namespace xml_rd {
         bool exist(std::string&);
     private:
         pugi::xml_document xml_doc;
-        std::unordered_map<unsigned long, std::shared_ptr<XMLBase> > cache_;
-        std::unordered_map<std::string, boost::ptr_vector<XMLBase> > tree;
+        std::vector<XMLBlock> cache_;
+        std::unordered_map<std::string, std::unordered_set<XMLEmploy> > tree;
         size_t size_cache;
         unsigned long pointer_last_record;
     };
@@ -126,5 +98,15 @@ namespace xml_rd {
     private:
         std::shared_ptr<ManagerXML> manager;
         std::string current_department;
+    };
+}
+
+namespace std {
+    template<> struct hash<xml_rd::XMLEmploy>
+    {
+        std::size_t operator()(const xml_rd::XMLEmploy& h) const noexcept
+        {
+            return h(h);
+        }
     };
 }
