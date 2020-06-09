@@ -14,6 +14,7 @@ int main() {
     }
 
     manager->show_tree();
+    manager->save();
 
 //    auto interface = xml_rd::Interface(manager);
 //    interface.start();

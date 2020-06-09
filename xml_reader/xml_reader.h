@@ -10,8 +10,6 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
-#include <list>
-#include <boost/ptr_container/ptr_vector.hpp>
 #include "../pugixml/pugixml.hpp"
 
 
@@ -19,6 +17,7 @@
 namespace xml_rd {
 
     enum type_operation {
+        none,
         write,
         erase,
         change
@@ -31,8 +30,7 @@ namespace xml_rd {
         std::string function;
         unsigned int salary;
 
-        bool operator==(const XMLEmploy& compare) const noexcept
-        {
+        bool operator==(const XMLEmploy &compare) const noexcept {
             return (surname == compare.surname &&
                     name == compare.name &&
                     middleName == compare.middleName &&
@@ -40,26 +38,40 @@ namespace xml_rd {
                     salary == compare.salary);
         }
 
-        size_t operator()(const XMLEmploy& hashPoint) const noexcept
-        {
+        size_t operator()(const XMLEmploy &hashPoint) const noexcept {
             size_t hash = std::hash<std::string>{}(surname);
             hash += std::hash<std::string>{}(name);
             hash += std::hash<std::string>{}(middleName);
             return hash;
         }
     };
-
+}
+namespace std {
+    template<> struct hash<xml_rd::XMLEmploy>
+    {
+        std::size_t operator()(const xml_rd::XMLEmploy& h) const noexcept
+        {
+            return h(h);
+        }
+    };
+}
+namespace xml_rd {
 
     struct XMLBlock {
+        XMLBlock():
+        type(type_operation::none),
+        newEmploy(nullptr),
+        oldEmploy(nullptr),
+        newNameDepart(""),
+        oldNameDepart("")
+        {}
+
         type_operation type;
-        std::unique_ptr<XMLEmploy> employ;
-        std::string depart;
-
-        bool operator== (const XMLBlock& compare) const noexcept
-        {
-            return (type == compare.type && employ == compare.employ && depart == compare.depart);
-        }
-
+        std::shared_ptr<XMLEmploy> newEmploy;
+        std::shared_ptr<XMLEmploy> oldEmploy;
+        std::string newNameDepart;
+        std::string oldNameDepart;
+        std::unordered_set<XMLEmploy> old_data;
     };
 
     struct CombineBlock {
@@ -76,13 +88,14 @@ namespace xml_rd {
 
         // TODO Rewrite to iter
         void show_tree(std::ostream &out = std::cout) const;
-        void put(std::unique_ptr<XMLBlock>);
+        void put(const XMLBlock&);
         void save();
         void rollback();
         void step_back();
         bool exist(std::string&);
     private:
         pugi::xml_document xml_doc;
+        std::string path;
         std::vector<XMLBlock> cache_;
         std::unordered_map<std::string, std::unordered_set<XMLEmploy> > tree;
         size_t size_cache;
@@ -101,12 +114,12 @@ namespace xml_rd {
     };
 }
 
-namespace std {
-    template<> struct hash<xml_rd::XMLEmploy>
-    {
-        std::size_t operator()(const xml_rd::XMLEmploy& h) const noexcept
-        {
-            return h(h);
-        }
-    };
-}
+//namespace std {
+//    template<> struct hash<xml_rd::XMLEmploy>
+//    {
+//        std::size_t operator()(const xml_rd::XMLEmploy& h) const noexcept
+//        {
+//            return h(h);
+//        }
+//    };
+//}

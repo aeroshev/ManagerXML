@@ -45,7 +45,8 @@ namespace xml_rd
 
     void ManagerXML::load_file(const std::string &path)
     {
-        if (!xml_doc.load_file(path.c_str()))
+        this->path = path;
+        if (!xml_doc.load_file(this->path.c_str()))
             throw std::invalid_argument("Can't read this file");
 
         pugi::xml_node departments = xml_doc.child("departments");
@@ -64,7 +65,6 @@ namespace xml_rd
                 block.salary = std::stoi(employment.child("salary").child_value());
                 tree[dep_name].insert(block);
             }
-
         }
     }
 
@@ -76,7 +76,7 @@ namespace xml_rd
             avg_sal = 0;
             out << "Departament name -> " << dep.first << '\n';
             std::cout << "Count of employee in department -> " << dep.second.size() << '\n';
-            for (const auto & empl : dep.second)
+            for (const auto& empl : dep.second)
             {
                 out << '\t' << "Surname -> " << empl.surname << '\n';
                 out << '\t' << "Name -> " << empl.name << '\n';
@@ -93,85 +93,119 @@ namespace xml_rd
         }
 
     }
-    // TODO Safe changes in cache
-    void ManagerXML::put(std::unique_ptr<XMLBlock> box)
+
+    void ManagerXML::put(const XMLBlock& box)
     {
-//        if (pointer_last_record < size_cache)
-//        {
-//            cache_.push_back(*box);
-//            switch (box->type)
-//            {
-//                case type_operation::write:
-//                    if (box->employ != nullptr)
-//                        tree[box->depart].insert(*box->employ);
-//                    else
-//                        tree.insert(std::make_pair(box->depart, std::unordered_set<XMLEmploy>()));
-//                    break;
-//                case type_operation::erase:
-//                    if (box->employ != nullptr)
-//                        tree[box->depart].erase(*box->employ);
-//                    else
-//                        tree.erase(box->depart);
-//                    break;
-//                case type_operation::change:
-//                    if (box->employ != nullptr)
-//                    {
-//                        auto ptr = tree[box->depart].find(*box->employ);
-//                    }
-//                    else
-//                    {
-//                        auto nodeHandler = tree.extract(box->depart);
-//                        nodeHandler.key() = box->depart;
-//                        tree.insert(std::move(nodeHandler));
-//                    }
-//                    default:
-//                        std::cout << "Something wrong" << '\n';
-//            }
-//        }
-//        else
-//            throw std::out_of_range("Cache is full");
+        if (pointer_last_record < size_cache)
+        {
+            cache_.push_back(box);
+            pointer_last_record++;
+            switch (box.type) {
+                case type_operation::write:
+                    if (box.newEmploy != nullptr) {
+                        tree[box.oldNameDepart].insert(*box.newEmploy);
+                    } else {
+                        tree.insert(std::make_pair(box.newNameDepart, std::unordered_set<XMLEmploy>()));
+                    }
+                    break;
+                case type_operation::erase:
+                    if (box.oldEmploy != nullptr) {
+                        tree[box.oldNameDepart].erase(*box.oldEmploy);
+                    } else {
+                        tree.erase(box.oldNameDepart);
+                    }
+                    break;
+                case type_operation::change:
+                    if (box.oldEmploy != nullptr) {
+                        auto emplHandler = tree[box.oldNameDepart].extract(*box.oldEmploy);
+                        emplHandler.value() = *box.newEmploy;
+                        tree[box.oldNameDepart].insert(std::move(emplHandler));
+                    } else {
+                        auto nodeHandler = tree.extract(box.oldNameDepart);
+                        nodeHandler.key() = box.newNameDepart;
+                        tree.insert(std::move(nodeHandler));
+                    }
+                    break;
+                    default:
+                        std::cout << "Something wrong" << '\n';
+            }
+        }
+        else
+            throw std::out_of_range("Cache is full");
     }
 
-//    void ManagerXML::save()
-//    {
-//        for (auto &pointer : cache_)
-//        {
-//            switch (pointer.second.type)
-//            {
-//                case type_operation::write:
-//                    continue;
-//                case type_operation::erase:
-//                    continue;
-//                case type_operation::change:
-//                    continue;
-//                default:
-//                    continue;
-//            }
-//        }
-//        pointer_last_record = 0;
+    void ManagerXML::save()
+    {
+        cache_.clear();
+        pointer_last_record = 0;
+        xml_doc.remove_child("departments");
+        xml_doc.append_child("departments");
+        pugi::xml_node departments = xml_doc.child("departments");
+
+        for (const auto& dep : tree) {
+            auto department = departments.append_child("department");
+            department.append_attribute("name") = dep.first.c_str();
+            auto employments = department.append_child("employments");
+            for (const auto& node : dep.second) {
+                auto employment = employments.append_child("employment");
+                employment.append_child("surname").append_child(pugi::node_pcdata).set_value(node.surname.c_str());
+                employment.append_child("name").append_child(pugi::node_pcdata).set_value(node.name.c_str());
+                employment.append_child("middleName").append_child(pugi::node_pcdata).set_value(node.middleName.c_str());
+                employment.append_child("function").append_child(pugi::node_pcdata).set_value(node.function.c_str());
+                employment.append_child("salary").append_child(pugi::node_pcdata).set_value(std::to_string(node.salary).c_str());
+            }
+        }
+        xml_doc.save_file(this->path.c_str(), "\t", pugi::format_default, pugi::encoding_utf8);
+        xml_doc.print(std::cout);
     }
-//
-//    void ManagerXML::rollback()
-//    {
-//        cache_.clear();
-//        pointer_last_record = 0;
-//    }
-//
-//    void ManagerXML::step_back()
-//    {
-//        if (pointer_last_record > 1) {
-//            cache_.extract(pointer_last_record - 1);
-//            pointer_last_record -= 1;
-//        }
-//    }
-//
-//    bool ManagerXML::exist(std::string &name)
-//    {
-//        bool result = true;
-//        if (tree.end() == tree.find(name))
-//            result = false;
-//        return result;
-//    }
+
+    void ManagerXML::rollback()
+    {
+        while (pointer_last_record > 1) {
+            step_back();
+        }
+    }
+
+    void ManagerXML::step_back()
+    {
+        auto tr_unit = cache_[pointer_last_record - 1];
+        pointer_last_record--;
+        switch (tr_unit.type) {
+            case type_operation::write:
+                if (tr_unit.newEmploy != nullptr) {
+                    tree[tr_unit.oldNameDepart].erase(*tr_unit.newEmploy);
+                } else {
+                    tree.erase(tr_unit.newNameDepart);
+                }
+            case type_operation::erase:
+                if (tr_unit.oldEmploy != nullptr) {
+                    tree[tr_unit.oldNameDepart].insert(*tr_unit.oldEmploy);
+                } else {
+                    std::copy(tr_unit.old_data.begin(),
+                            tr_unit.old_data.end(),
+                            std::inserter(tree[tr_unit.oldNameDepart], tree[tr_unit.oldNameDepart].begin()));
+                }
+                break;
+            case type_operation::change:
+                if (tr_unit.oldEmploy != nullptr) {
+                    auto emplHandler = tree[tr_unit.oldNameDepart].extract(*tr_unit.newEmploy);
+                    emplHandler.value() = *tr_unit.oldEmploy;
+                    tree[tr_unit.oldNameDepart].insert(std::move(emplHandler));
+                } else {
+                    auto nodeHandler = tree.extract(tr_unit.newNameDepart);
+                    nodeHandler.key() = tr_unit.oldNameDepart;
+                    tree.insert(std::move(nodeHandler));
+                }
+                break;
+            default:
+                std::cout << "Something wrong" << '\n';
+        }
+    }
+
+    bool ManagerXML::exist(std::string &name)
+    {
+        return tree.end() != tree.find(name);
+    }
 ////----------------------------------------------------Interface---------------------------------------------------------
 //    Interface::Interface(std::shared_ptr<ManagerXML> manager):
 //    manager(std::move(manager))
@@ -301,4 +335,4 @@ namespace xml_rd
 //                std::cout << "Can't recognise command" <<'\n';
 //        }
 //    }
-
+}
