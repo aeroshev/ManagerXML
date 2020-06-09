@@ -13,8 +13,10 @@ int main() {
         return 1;
     }
 
-    auto interface = xml_rd::Interface(manager);
-    interface.start();
+    manager->show_tree();
+
+//    auto interface = xml_rd::Interface(manager);
+//    interface.start();
 
     return 0;
 }
