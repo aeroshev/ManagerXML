@@ -3,39 +3,59 @@
 //
 #include "xml_reader.h"
 
+
 namespace xml_rd
 {
 //--------------------------------------------------CombineBlock--------------------------------------------------------
-//    std::unique_ptr<XMLBlock> CombineBlock::create_employ(std::istream &in = std::cin, const std::string& dep = "")
-//    {
-//        auto handle = std::make_unique<XMLBlock>();
-//        handle->type = type_operation::write;
-//        handle->depart = dep;
-//
-//        std::cout << "Employ surname -> ";
-//        in >> handle->employ.surname;
-//        std::cout << "Employ name -> ";
-//        in >> handle->employ.name;
-//        std::cout << "Employ middleName -> ";
-//        in >> handle->employ.middleName;
-//        std::cout << "Employ function -> ";
-//        in >> handle->employ.function;
-//        std::cout << "Employ salary -> ";
-//        in >> handle->employ.salary;
-//
-//        return handle;
-//    }
-//
-//    std::unique_ptr<XMLBlock> CombineBlock::create_department(std::istream &in = std::cin)
-//    {
-//        auto handle = std::make_unique<XMLBlock>();
-//        handle->type = type_operation::write;
-//
-//        std::cout << "Department name -> ";
-//        in >> handle->depart;
-//
-//        return handle;
-//    }
+    std::unique_ptr<XMLBlock> CombineBlock::create_employ(type_operation op, const std::string& dep_name)
+    {
+        auto handle = std::make_unique<XMLBlock>();
+        handle->type = op;
+        handle->oldNameDepart = dep_name;
+        switch (op)
+        {
+        	case type_operation::write:
+        		filler(handle->newEmploy, "Input data");
+				break;
+			case  type_operation::erase:
+				filler(handle->oldEmploy, "Input data");
+				break;
+        	case type_operation::change:
+        		filler(handle->oldEmploy, "Old data");
+        		filler(handle->newEmploy, "New data");
+				break;
+		default:
+			std::cout << "Something wrong" << '\n';
+        }
+        return handle;
+    }
+
+    std::unique_ptr<XMLBlock> CombineBlock::create_dep(type_operation op, const std::string& new_dep, const std::string& old_dep)
+    {
+    	auto handle = std::make_unique<XMLBlock>();
+    	handle->type = op;
+    	handle->oldNameDepart = old_dep;
+    	handle->newNameDepart = new_dep;
+
+    	return handle;
+    }
+
+    void CombineBlock::filler(std::shared_ptr<XMLEmploy> fill_it, const std::string & title)
+    {
+        fill_it = std::make_shared<XMLEmploy>();
+
+        std::cout << title << '\n';
+        std::cout << "Employ surname -> ";
+        std::cin >> fill_it->surname;
+        std::cout << "Employ name -> ";
+		std::cin  >> fill_it->name;
+        std::cout << "Employ middleName -> ";
+		std::cin  >> fill_it->middleName;
+        std::cout << "Employ function -> ";
+		std::cin  >> fill_it->function;
+        std::cout << "Employ salary -> ";
+		std::cin  >> fill_it->salary;
+    }
 //-----------------------------------------------ManagerXML-------------------------------------------------------------
     ManagerXML::ManagerXML(size_t size_cache):
     size_cache(size_cache),
@@ -94,33 +114,41 @@ namespace xml_rd
 
     }
 
-    void ManagerXML::put(const XMLBlock& box)
+    void ManagerXML::put(XMLBlock& box)
     {
         if (pointer_last_record < size_cache)
         {
-            cache_.push_back(box);
-            pointer_last_record++;
             switch (box.type) {
                 case type_operation::write:
-                    if (box.newEmploy != nullptr) {
+                    if (box.newEmploy != nullptr)
+                    {
                         tree[box.oldNameDepart].insert(*box.newEmploy);
-                    } else {
+                    }
+                    else
+					{
                         tree.insert(std::make_pair(box.newNameDepart, std::unordered_set<XMLEmploy>()));
                     }
                     break;
                 case type_operation::erase:
-                    if (box.oldEmploy != nullptr) {
+                    if (box.oldEmploy != nullptr)
+                    {
                         tree[box.oldNameDepart].erase(*box.oldEmploy);
-                    } else {
+                    }
+                    else
+					{
+                    	box.old_data = tree[box.oldNameDepart];
                         tree.erase(box.oldNameDepart);
                     }
                     break;
                 case type_operation::change:
-                    if (box.oldEmploy != nullptr) {
+                    if (box.oldEmploy != nullptr)
+                    {
                         auto emplHandler = tree[box.oldNameDepart].extract(*box.oldEmploy);
                         emplHandler.value() = *box.newEmploy;
                         tree[box.oldNameDepart].insert(std::move(emplHandler));
-                    } else {
+                    }
+                    else
+					{
                         auto nodeHandler = tree.extract(box.oldNameDepart);
                         nodeHandler.key() = box.newNameDepart;
                         tree.insert(std::move(nodeHandler));
@@ -129,6 +157,8 @@ namespace xml_rd
                     default:
                         std::cout << "Something wrong" << '\n';
             }
+			cache_[pointer_last_record] = box;
+			pointer_last_record++;
         }
         else
             throw std::out_of_range("Cache is full");
@@ -172,26 +202,36 @@ namespace xml_rd
         pointer_last_record--;
         switch (tr_unit.type) {
             case type_operation::write:
-                if (tr_unit.newEmploy != nullptr) {
+                if (tr_unit.newEmploy != nullptr)
+                {
                     tree[tr_unit.oldNameDepart].erase(*tr_unit.newEmploy);
-                } else {
+                }
+                else
+				{
                     tree.erase(tr_unit.newNameDepart);
                 }
+				break;
             case type_operation::erase:
-                if (tr_unit.oldEmploy != nullptr) {
+                if (tr_unit.oldEmploy != nullptr)
+                {
                     tree[tr_unit.oldNameDepart].insert(*tr_unit.oldEmploy);
-                } else {
+                }
+                else
+				{
                     std::copy(tr_unit.old_data.begin(),
                             tr_unit.old_data.end(),
                             std::inserter(tree[tr_unit.oldNameDepart], tree[tr_unit.oldNameDepart].begin()));
                 }
                 break;
             case type_operation::change:
-                if (tr_unit.oldEmploy != nullptr) {
+                if (tr_unit.oldEmploy != nullptr)
+                {
                     auto emplHandler = tree[tr_unit.oldNameDepart].extract(*tr_unit.newEmploy);
                     emplHandler.value() = *tr_unit.oldEmploy;
                     tree[tr_unit.oldNameDepart].insert(std::move(emplHandler));
-                } else {
+                }
+                else
+				{
                     auto nodeHandler = tree.extract(tr_unit.newNameDepart);
                     nodeHandler.key() = tr_unit.oldNameDepart;
                     tree.insert(std::move(nodeHandler));
@@ -206,133 +246,151 @@ namespace xml_rd
     {
         return tree.end() != tree.find(name);
     }
-////----------------------------------------------------Interface---------------------------------------------------------
-//    Interface::Interface(std::shared_ptr<ManagerXML> manager):
-//    manager(std::move(manager))
-//    {}
-//
-//    Interface::~Interface()
-//    {
-//        manager.reset();
-//    }
-//
-//    void Interface::start()
-//    {
-//        unsigned int depth = 0;
-//        std::string command, op, dep, up;
-//        while(true)
-//        {
-//            std::cout << "/" << current_department << '\n';
-//            getline(std::cin, command);
-//
-//            op = command.substr(0, command.find(' '));
-//            if (op == "q")
-//                break;
-//            if (op == "sw")
-//            {
-//                manager->show_tree();
-//                continue;
-//            }
-//            if (op == "sb")
-//            {
-//                manager->step_back();
-//                continue;
-//            }
-//            if (op == "rb")
-//            {
-//                manager->rollback();
-//                continue;
-//            }
-//            if (op == "ad")
-//            {
-//                switch (depth)
-//                {
-//                    case 0:
-//                        manager->put(std::move(CombineBlock::create_department()));
-//                        break;
-//                    case 1:
-//                        manager->put(std::move(CombineBlock::create_employ(std::cin, current_department)));
-//                        break;
-//                    default:
-//                        std::cout << "Depth incorrect" << '\n';
-//                }
-//                continue;
-//            }
-//            if (op == "sv")
-//            {
-//                manager->save();
-//                continue;
-//            }
-//            // TODO bring out this
-//            dep = command.substr(4);
-//            dep = dep.substr(0, dep.length() - 1);
-//
-//            if (op == "cd")
-//            {
-//                up = command.substr(3);
-//                if (up == "..")
-//                    if (depth == 0)
-//                        std::cout << "We're the top tree" << '\n';
-//                    else
-//                    {
-//                        depth--;
-//                        current_department = "";
-//                    }
-//
-//                else
-//                    if (depth == 1)
-//                        std::cout << "We're the bottom tree" << '\n';
-//                    else
-//                    {
-//                        if (manager->exist(dep))
-//                        {
-//                            depth++;
-//                            current_department = dep;
-//                        }
-//                        else
-//                            std::cout << "This department does't exist" << '\n';
-//                    }
-//            }
-//            else if (op == "rm")
-//            {
-//                switch (depth)
-//                {
-//                    case 0:
-//                        // delete department
-//                        break;
-//                    case 1:
-//                        // delete employ
-//                        break;
-//                    default:
-//                        std::cout << "Depth incorrect" << '\n';
-//                }
-//            }
-//            else if (op == "ch")
-//            {
-//                std::cout << dep << '\n';
-//                unsigned int pos = dep.find('\"') + 1;
-//                std::string cur_name = dep.substr(0, pos);
-//                cur_name = cur_name.substr(0, cur_name.length() - 1);
-//                std::string new_name = dep.substr(pos, dep.find('\"'));
-//                new_name = new_name.substr(2, new_name.length());
-//
-//                switch (depth)
-//                {
-//                    case 0:
-//                        // change department
-//                        break;
-//                    case 1:
-//                        // change employ
-//                        break;
-//                    default:
-//                        std::cout << "Depth incorrect" << '\n';
-//                }
-//
-//                std::cout << cur_name << '\n';
-//                std::cout << new_name << '\n';
-//            }
-//            else
-//                std::cout << "Can't recognise command" <<'\n';
-//        }
-//    }
+//----------------------------------------------------Interface---------------------------------------------------------
+    Interface::Interface(std::shared_ptr<ManagerXML> manager):
+    manager(std::move(manager))
+    {}
+
+    Interface::~Interface()
+    {
+        manager.reset();
+    }
+
+    void Interface::start()
+    {
+        unsigned int depth = 0, space = 0;
+        std::string command, op, dep, up;
+        while(true)
+        {
+        	std::cin.clear();
+            std::cout << "/" << current_department << '\n';
+            getline(std::cin, command);
+
+            space = command.find_first_of(' ');
+            op = command.substr(0, space);
+
+            if (op == "quit")
+			{
+				break;
+			}
+            else if (op == "show")
+            {
+                manager->show_tree();
+                continue;
+            }
+            else if (op == "step_back")
+            {
+                manager->step_back();
+                continue;
+            }
+            else if (op == "rollback")
+            {
+                manager->rollback();
+                continue;
+            }
+            else if (op == "add")
+            {
+                switch (depth)
+                {
+                    case 0:
+					{
+						std::string dep_name;
+						std::cout << "Input name department -> ";
+						getline(std::cin, dep_name);
+						manager->put(*std::move(CombineBlock::create_dep(type_operation::write, dep_name, "")));
+						break;
+					}
+                    case 1:
+                        manager->put(*std::move(CombineBlock::create_employ(type_operation::write, current_department)));
+                        break;
+                    default:
+                        std::cout << "Depth incorrect" << '\n';
+                }
+                continue;
+            }
+            else if (op == "save")
+            {
+                manager->save();
+                continue;
+            }
+            else if (op == "cd")
+            {
+                up = command.substr(space);
+
+                unsigned int start_dep = command.find_first_of('\"') + 1;
+                unsigned int len = command.find_last_of('\"') - start_dep;
+                dep = command.substr(start_dep, len);
+
+                if (up == "..")
+                    if (depth == 0)
+                        std::cout << "We're the top tree" << '\n';
+                    else
+                    {
+                        depth--;
+                        current_department = "";
+                    }
+
+                else
+                    if (depth == 1)
+                        std::cout << "We're the bottom tree" << '\n';
+                    else
+                    {
+                        if (manager->exist(dep))
+                        {
+                            depth++;
+                            current_department = dep;
+                        }
+                        else
+                            std::cout << "This department does't exist" << '\n';
+                    }
+            }
+            else if (op == "rm")
+            {
+                switch (depth)
+                {
+                    case 0:
+					{
+						unsigned int start_dep = command.find_first_of('\"') + 1;
+						unsigned int len = command.find_last_of('\"') - start_dep;
+						dep = command.substr(start_dep, len);
+
+						manager->put(*std::move(CombineBlock::create_dep(type_operation::erase, "", dep)));
+						break;
+					}
+                    case 1:
+                        manager->put(*std::move(CombineBlock::create_employ(type_operation::erase, current_department)));
+                        break;
+                    default:
+                        std::cout << "Depth incorrect" << '\n';
+                }
+            }
+            else if (op == "ch")
+            {
+            	// TODO
+                std::cout << dep << '\n';
+                unsigned int pos = dep.find('\"') + 1;
+                std::string cur_name = dep.substr(0, pos);
+                cur_name = cur_name.substr(0, cur_name.length() - 1);
+                std::string new_name = dep.substr(pos, dep.find('\"'));
+                new_name = new_name.substr(2, new_name.length());
+
+                switch (depth)
+                {
+                    case 0:
+                        manager->put(*std::move(CombineBlock::create_dep(type_operation::change, new_name, cur_name)));
+                        break;
+                    case 1:
+                        manager->put(*std::move(CombineBlock::create_employ(type_operation::change, current_department)));
+                        break;
+                    default:
+                        std::cout << "Depth incorrect" << '\n';
+                }
+
+                std::cout << cur_name << '\n';
+                std::cout << new_name << '\n';
+            }
+            else
+                std::cout << "Can't recognise command" <<'\n';
+        }
+    }
 }

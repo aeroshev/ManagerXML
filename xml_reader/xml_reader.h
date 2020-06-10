@@ -13,9 +13,8 @@
 #include "../pugixml/pugixml.hpp"
 
 
-
-namespace xml_rd {
-
+namespace xml_rd
+{
     enum type_operation {
         none,
         write,
@@ -30,7 +29,8 @@ namespace xml_rd {
         std::string function;
         unsigned int salary;
 
-        bool operator==(const XMLEmploy &compare) const noexcept {
+        bool operator==(const XMLEmploy &compare) const noexcept
+        {
             return (surname == compare.surname &&
                     name == compare.name &&
                     middleName == compare.middleName &&
@@ -38,7 +38,8 @@ namespace xml_rd {
                     salary == compare.salary);
         }
 
-        size_t operator()(const XMLEmploy &hashPoint) const noexcept {
+        size_t operator()(const XMLEmploy &hashPoint) const noexcept
+        {
             size_t hash = std::hash<std::string>{}(surname);
             hash += std::hash<std::string>{}(name);
             hash += std::hash<std::string>{}(middleName);
@@ -46,7 +47,9 @@ namespace xml_rd {
         }
     };
 }
-namespace std {
+
+namespace std
+{
     template<> struct hash<xml_rd::XMLEmploy>
     {
         std::size_t operator()(const xml_rd::XMLEmploy& h) const noexcept
@@ -55,6 +58,7 @@ namespace std {
         }
     };
 }
+
 namespace xml_rd {
 
     struct XMLBlock {
@@ -76,7 +80,9 @@ namespace xml_rd {
 
     struct CombineBlock {
         // TODO Memory handle
-
+        static std::unique_ptr<XMLBlock> create_employ(type_operation, const std::string&);
+        static std::unique_ptr<XMLBlock> create_dep(type_operation, const std::string&, const std::string&);
+        static void filler(std::shared_ptr<XMLEmploy>, const std::string&);
     };
 
     class ManagerXML {
@@ -88,7 +94,7 @@ namespace xml_rd {
 
         // TODO Rewrite to iter
         void show_tree(std::ostream &out = std::cout) const;
-        void put(const XMLBlock&);
+        void put(XMLBlock&);
         void save();
         void rollback();
         void step_back();
@@ -113,13 +119,3 @@ namespace xml_rd {
         std::string current_department;
     };
 }
-
-//namespace std {
-//    template<> struct hash<xml_rd::XMLEmploy>
-//    {
-//        std::size_t operator()(const xml_rd::XMLEmploy& h) const noexcept
-//        {
-//            return h(h);
-//        }
-//    };
-//}
