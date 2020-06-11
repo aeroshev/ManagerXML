@@ -57,8 +57,8 @@ namespace xml_rd
 {
 	struct XMLBlock {
 		type_operation type;
-		std::shared_ptr<XMLEmploy> newEmploy;
-		std::shared_ptr<XMLEmploy> oldEmploy;
+		std::unique_ptr<XMLEmploy> newEmploy;
+		std::unique_ptr<XMLEmploy> oldEmploy;
 		std::string newNameDepart;
 		std::string oldNameDepart;
 		std::unordered_set<XMLEmploy> old_data;

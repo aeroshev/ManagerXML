@@ -12,16 +12,16 @@ namespace xml_rd
 		switch (op)
 		{
 		case type_operation::write:
-			handle->newEmploy = std::make_shared<XMLEmploy>();
+			handle->newEmploy = std::make_unique<XMLEmploy>();
 			filler(handle->newEmploy, "Input data");
 			break;
 		case  type_operation::erase:
-			handle->oldEmploy = std::make_shared<XMLEmploy>();
+			handle->oldEmploy = std::make_unique<XMLEmploy>();
 			filler(handle->oldEmploy, "Input data");
 			break;
 		case type_operation::change:
-			handle->newEmploy = std::make_shared<XMLEmploy>();
-			handle->oldEmploy = std::make_shared<XMLEmploy>();
+			handle->newEmploy = std::make_unique<XMLEmploy>();
+			handle->oldEmploy = std::make_unique<XMLEmploy>();
 			filler(handle->oldEmploy, "Old data");
 			filler(handle->newEmploy, "New data");
 			break;
@@ -41,7 +41,7 @@ namespace xml_rd
 		return handle;
 	}
 
-	void CombineBlock::filler(const std::shared_ptr<XMLEmploy>& fill_it, const std::string & title)
+	void CombineBlock::filler(const std::unique_ptr<XMLEmploy>& fill_it, const std::string & title)
 	{
 		std::string salary;
 		bool error = false;

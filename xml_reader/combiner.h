@@ -10,7 +10,8 @@ namespace xml_rd
 		// TODO Memory handle
 		static std::unique_ptr<XMLBlock> create_employ(type_operation, const std::string&);
 		static std::unique_ptr<XMLBlock> create_dep(type_operation, const std::string&, const std::string&);
-		static void filler(const std::shared_ptr<XMLEmploy>&, const std::string&);
+	private:
+		static void filler(const std::unique_ptr<XMLEmploy>&, const std::string&);
 	};
 }
 

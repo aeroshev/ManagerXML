@@ -117,7 +117,7 @@ namespace xml_rd
                     default:
 						std::cerr << "Can't recognize type command" << '\n';
             }
-			cache_[pointer_last_record] = *box;
+			cache_[pointer_last_record] = std::move(*box);
 			pointer_last_record++;
         }
         else
@@ -178,7 +178,7 @@ namespace xml_rd
 			return;
 		}
 
-        auto tr_unit = cache_[pointer_last_record - 1];
+        auto tr_unit = std::move(cache_[pointer_last_record - 1]);
         pointer_last_record--;
         switch (tr_unit.type) {
             case type_operation::write:
