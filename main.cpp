@@ -1,4 +1,7 @@
+// Created by Ерошев Артём
+
 #include "xml_reader/xml_reader.h"
+#include "xml_reader/xml_manager.h"
 
 
 int main()
