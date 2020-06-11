@@ -1,7 +1,8 @@
 #include "xml_reader/xml_reader.h"
 
 
-int main() {
+int main()
+{
     std::ios_base::sync_with_stdio(false);
 
     auto manager = std::make_shared<xml_rd::ManagerXML>();

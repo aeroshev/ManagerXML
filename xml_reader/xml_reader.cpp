@@ -15,17 +15,21 @@ namespace xml_rd
         switch (op)
         {
         	case type_operation::write:
+        		handle->newEmploy = std::make_shared<XMLEmploy>();
         		filler(handle->newEmploy, "Input data");
 				break;
 			case  type_operation::erase:
+				handle->oldEmploy = std::make_shared<XMLEmploy>();
 				filler(handle->oldEmploy, "Input data");
 				break;
         	case type_operation::change:
+				handle->newEmploy = std::make_shared<XMLEmploy>();
+				handle->oldEmploy = std::make_shared<XMLEmploy>();
         		filler(handle->oldEmploy, "Old data");
         		filler(handle->newEmploy, "New data");
 				break;
 		default:
-			std::cout << "Something wrong" << '\n';
+			std::cerr << "Can't recognize type command" << '\n';
         }
         return handle;
     }
@@ -40,30 +44,51 @@ namespace xml_rd
     	return handle;
     }
 
-    void CombineBlock::filler(std::shared_ptr<XMLEmploy> fill_it, const std::string & title)
+    void CombineBlock::filler(const std::shared_ptr<XMLEmploy>& fill_it, const std::string & title)
     {
-        fill_it = std::make_shared<XMLEmploy>();
+		std::string salary;
+		bool error = false;
 
         std::cout << title << '\n';
         std::cout << "Employ surname -> ";
-        std::cin >> fill_it->surname;
+		getline(std::cin, fill_it->surname);
         std::cout << "Employ name -> ";
-		std::cin  >> fill_it->name;
+		getline(std::cin, fill_it->name);
         std::cout << "Employ middleName -> ";
-		std::cin  >> fill_it->middleName;
+		getline(std::cin, fill_it->middleName);
         std::cout << "Employ function -> ";
-		std::cin  >> fill_it->function;
-        std::cout << "Employ salary -> ";
-		std::cin  >> fill_it->salary;
+		getline(std::cin, fill_it->function);
+
+		std::cout << "Employ salary -> ";
+		do {
+			getline(std::cin, salary);
+
+			try
+			{
+				fill_it->salary = std::abs(std::stoi(salary));
+				error = false;
+			}
+			catch (std::invalid_argument& e)
+			{
+				std::cerr << "Enter only digit" << '\n';
+				error = true;
+			}
+			catch (std::out_of_range& e)
+			{
+				std::cerr << "Too much value" << '\n';
+				error = true;
+			}
+		} while (error);
     }
 //-----------------------------------------------ManagerXML-------------------------------------------------------------
     ManagerXML::ManagerXML(size_t size_cache):
     size_cache(size_cache),
     cache_(1024),
-    pointer_last_record(0)
+    pointer_last_record(0),
+    is_open(false)
     {}
 
-    void ManagerXML::load_file(const std::string &path)
+    void ManagerXML::load_file(const std::string &path = "")
     {
         this->path = path;
         if (!xml_doc.load_file(this->path.c_str()))
@@ -86,10 +111,17 @@ namespace xml_rd
                 tree[dep_name].insert(block);
             }
         }
+        is_open = true;
     }
 
     void ManagerXML::show_tree(std::ostream &out) const
     {
+    	if (!is_open)
+		{
+    		std::cerr << "File don't open" << '\n';
+			return;
+		}
+
         double avg_sal = 0;
         for (const auto& dep : tree)
         {
@@ -106,66 +138,78 @@ namespace xml_rd
                 out << '\n';
                 avg_sal += empl.salary;
             }
-            avg_sal /= dep.second.size();
+            avg_sal /= (dep.second.size()) ? dep.second.size() : 1;
             std::cout << "Average salary in department -> " << std::round(avg_sal * 100) / 100 << '\n';
-            out << '\n';
-            std::cout << std::is_base_of<std::unordered_set<XMLEmploy>, decltype(dep.second)>::value << '\n';
+            std::cout << '\n';
         }
-
     }
 
-    void ManagerXML::put(XMLBlock& box)
+    void ManagerXML::put(std::unique_ptr<XMLBlock> box)
     {
+		if (!is_open)
+		{
+			std::cerr << "File don't open" << '\n';
+			return;
+		}
+
         if (pointer_last_record < size_cache)
         {
-            switch (box.type) {
+            switch (box->type) {
                 case type_operation::write:
-                    if (box.newEmploy != nullptr)
+                    if (box->newEmploy != nullptr)
                     {
-                        tree[box.oldNameDepart].insert(*box.newEmploy);
+                        tree[box->oldNameDepart].insert(*box->newEmploy);
                     }
                     else
 					{
-                        tree.insert(std::make_pair(box.newNameDepart, std::unordered_set<XMLEmploy>()));
+                        tree.insert(std::make_pair(box->newNameDepart, std::unordered_set<XMLEmploy>()));
                     }
                     break;
                 case type_operation::erase:
-                    if (box.oldEmploy != nullptr)
+                    if (box->oldEmploy != nullptr)
                     {
-                        tree[box.oldNameDepart].erase(*box.oldEmploy);
+                        tree[box->oldNameDepart].erase(*box->oldEmploy);
                     }
                     else
 					{
-                    	box.old_data = tree[box.oldNameDepart];
-                        tree.erase(box.oldNameDepart);
+                    	box->old_data = tree[box->oldNameDepart];
+                        tree.erase(box->oldNameDepart);
                     }
                     break;
                 case type_operation::change:
-                    if (box.oldEmploy != nullptr)
+                    if (box->oldEmploy != nullptr)
                     {
-                        auto emplHandler = tree[box.oldNameDepart].extract(*box.oldEmploy);
-                        emplHandler.value() = *box.newEmploy;
-                        tree[box.oldNameDepart].insert(std::move(emplHandler));
+                        auto emplHandler = tree[box->oldNameDepart].extract(*box->oldEmploy);
+                        emplHandler.value() = *box->newEmploy;
+                        tree[box->oldNameDepart].insert(std::move(emplHandler));
                     }
                     else
 					{
-                        auto nodeHandler = tree.extract(box.oldNameDepart);
-                        nodeHandler.key() = box.newNameDepart;
+                        auto nodeHandler = tree.extract(box->oldNameDepart);
+                        nodeHandler.key() = box->newNameDepart;
                         tree.insert(std::move(nodeHandler));
                     }
                     break;
                     default:
-                        std::cout << "Something wrong" << '\n';
+						std::cerr << "Can't recognize type command" << '\n';
             }
-			cache_[pointer_last_record] = box;
+			cache_[pointer_last_record] = *box;
 			pointer_last_record++;
         }
         else
-            throw std::out_of_range("Cache is full");
+		{
+			std::cerr <<"Cache is full. Please accept or discard all changes" << '\n';
+		}
     }
 
     void ManagerXML::save()
     {
+		if (!is_open)
+		{
+			std::cerr << "File don't open" << '\n';
+			return;
+		}
+
         cache_.clear();
         pointer_last_record = 0;
         xml_doc.remove_child("departments");
@@ -191,6 +235,12 @@ namespace xml_rd
 
     void ManagerXML::rollback()
     {
+		if (!is_open)
+		{
+			std::cerr << "File don't open" << '\n';
+			return;
+		}
+
         while (pointer_last_record > 1) {
             step_back();
         }
@@ -198,6 +248,12 @@ namespace xml_rd
 
     void ManagerXML::step_back()
     {
+		if (!is_open)
+		{
+			std::cerr << "File don't open" << '\n';
+			return;
+		}
+
         auto tr_unit = cache_[pointer_last_record - 1];
         pointer_last_record--;
         switch (tr_unit.type) {
@@ -238,12 +294,18 @@ namespace xml_rd
                 }
                 break;
             default:
-                std::cout << "Something wrong" << '\n';
+                std::cerr << "Can't recognize type command" << '\n';
         }
     }
 
     bool ManagerXML::exist(std::string &name)
     {
+		if (!is_open)
+		{
+			std::cerr << "File don't open" << '\n';
+			return false;
+		}
+
         return tree.end() != tree.find(name);
     }
 //----------------------------------------------------Interface---------------------------------------------------------
@@ -297,14 +359,14 @@ namespace xml_rd
 						std::string dep_name;
 						std::cout << "Input name department -> ";
 						getline(std::cin, dep_name);
-						manager->put(*std::move(CombineBlock::create_dep(type_operation::write, dep_name, "")));
+						manager->put(std::move(CombineBlock::create_dep(type_operation::write, dep_name, "")));
 						break;
 					}
                     case 1:
-                        manager->put(*std::move(CombineBlock::create_employ(type_operation::write, current_department)));
+                        manager->put(std::move(CombineBlock::create_employ(type_operation::write, current_department)));
                         break;
                     default:
-                        std::cout << "Depth incorrect" << '\n';
+                        std::cerr << "Depth incorrect" << '\n';
                 }
                 continue;
             }
@@ -323,7 +385,7 @@ namespace xml_rd
 
                 if (up == "..")
                     if (depth == 0)
-                        std::cout << "We're the top tree" << '\n';
+                        std::cerr << "We're the top tree" << '\n';
                     else
                     {
                         depth--;
@@ -332,7 +394,7 @@ namespace xml_rd
 
                 else
                     if (depth == 1)
-                        std::cout << "We're the bottom tree" << '\n';
+                        std::cerr << "We're the bottom tree" << '\n';
                     else
                     {
                         if (manager->exist(dep))
@@ -341,7 +403,7 @@ namespace xml_rd
                             current_department = dep;
                         }
                         else
-                            std::cout << "This department does't exist" << '\n';
+                            std::cerr << "This department does't exist" << '\n';
                     }
             }
             else if (op == "rm")
@@ -354,14 +416,14 @@ namespace xml_rd
 						unsigned int len = command.find_last_of('\"') - start_dep;
 						dep = command.substr(start_dep, len);
 
-						manager->put(*std::move(CombineBlock::create_dep(type_operation::erase, "", dep)));
+						manager->put(std::move(CombineBlock::create_dep(type_operation::erase, "", dep)));
 						break;
 					}
                     case 1:
-                        manager->put(*std::move(CombineBlock::create_employ(type_operation::erase, current_department)));
+                        manager->put(std::move(CombineBlock::create_employ(type_operation::erase, current_department)));
                         break;
                     default:
-                        std::cout << "Depth incorrect" << '\n';
+                        std::cerr << "Depth incorrect" << '\n';
                 }
             }
             else if (op == "ch")
@@ -377,20 +439,29 @@ namespace xml_rd
                 switch (depth)
                 {
                     case 0:
-                        manager->put(*std::move(CombineBlock::create_dep(type_operation::change, new_name, cur_name)));
+                        manager->put(std::move(CombineBlock::create_dep(type_operation::change, new_name, cur_name)));
                         break;
                     case 1:
-                        manager->put(*std::move(CombineBlock::create_employ(type_operation::change, current_department)));
+                        manager->put(std::move(CombineBlock::create_employ(type_operation::change, current_department)));
                         break;
                     default:
-                        std::cout << "Depth incorrect" << '\n';
+                        std::cerr << "Depth incorrect" << '\n';
                 }
-
-                std::cout << cur_name << '\n';
-                std::cout << new_name << '\n';
             }
+            else if (op == "man")
+			{
+            	std::cout << "quit - quit out this program" << '\n';
+				std::cout << "show - show content in tree loaded file" << '\n';
+				std::cout << "step_back - discard last command" << '\n';
+				std::cout << "rollback - discard all changes" << '\n';
+				std::cout << "add - add new departments or employ. If you stay in top '/' command will add department" << '\n';
+				std::cout << "save - accept all changes and write in file" << '\n';
+				std::cout << "cd - move to department directories" << '\n';
+				std::cout << "rm - delete departement or employ. Choice equal like in add" << '\n';
+				std::cout << "ch - change contain in departments or employ. For departments 'ch \"old_name\" \"new_name\"'" << '\n';
+			}
             else
-                std::cout << "Can't recognise command" <<'\n';
+                std::cerr << "Can't recognise command" <<'\n';
         }
     }
 }

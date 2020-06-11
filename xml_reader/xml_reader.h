@@ -16,7 +16,6 @@
 namespace xml_rd
 {
     enum type_operation {
-        none,
         write,
         erase,
         change
@@ -62,14 +61,6 @@ namespace std
 namespace xml_rd {
 
     struct XMLBlock {
-        XMLBlock():
-        type(type_operation::none),
-        newEmploy(nullptr),
-        oldEmploy(nullptr),
-        newNameDepart(""),
-        oldNameDepart("")
-        {}
-
         type_operation type;
         std::shared_ptr<XMLEmploy> newEmploy;
         std::shared_ptr<XMLEmploy> oldEmploy;
@@ -82,7 +73,7 @@ namespace xml_rd {
         // TODO Memory handle
         static std::unique_ptr<XMLBlock> create_employ(type_operation, const std::string&);
         static std::unique_ptr<XMLBlock> create_dep(type_operation, const std::string&, const std::string&);
-        static void filler(std::shared_ptr<XMLEmploy>, const std::string&);
+        static void filler(const std::shared_ptr<XMLEmploy>&, const std::string&);
     };
 
     class ManagerXML {
@@ -90,22 +81,24 @@ namespace xml_rd {
         explicit ManagerXML(size_t size_cache = 1024);
         ~ManagerXML() = default;
 
-        void load_file(const std::string &path = "");
+        void load_file(const std::string &);
 
         // TODO Rewrite to iter
         void show_tree(std::ostream &out = std::cout) const;
-        void put(XMLBlock&);
+        void put(std::unique_ptr<XMLBlock>);
         void save();
         void rollback();
         void step_back();
         bool exist(std::string&);
     private:
         pugi::xml_document xml_doc;
+        // TODO needed this path?
         std::string path;
         std::vector<XMLBlock> cache_;
         std::unordered_map<std::string, std::unordered_set<XMLEmploy> > tree;
         size_t size_cache;
         unsigned long pointer_last_record;
+        bool is_open;
     };
 
     class Interface {
