@@ -1,6 +1,6 @@
 // Created by Ерошев Артём
 
-#include "xml_manager.h"
+#include "xml_interface.h"
 
 
 namespace xml_rd
@@ -125,12 +125,23 @@ namespace xml_rd
 			else if (op == "ch")
 			{
 				// TODO
-				std::cout << dep << '\n';
-				unsigned int pos = dep.find('\"') + 1;
-				std::string cur_name = dep.substr(0, pos);
-				cur_name = cur_name.substr(0, cur_name.length() - 1);
-				std::string new_name = dep.substr(pos, dep.find('\"'));
-				new_name = new_name.substr(2, new_name.length());
+				std::string new_name, cur_name;
+				unsigned int pos;
+				try
+				{
+					std::cout << dep << '\n';
+					pos = dep.find('\"') + 1;
+					cur_name = dep.substr(0, pos);
+					cur_name = cur_name.substr(0, cur_name.length() - 1);
+					new_name = dep.substr(pos, dep.find('\"'));
+					new_name = new_name.substr(2, new_name.length());
+				}
+				catch (std::out_of_range& e)
+				{
+					std::cerr << e.what() << '\n';
+					continue;
+				}
+
 
 				switch (depth)
 				{

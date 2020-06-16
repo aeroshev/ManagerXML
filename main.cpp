@@ -1,7 +1,7 @@
 // Created by Ерошев Артём
 
 #include "xml_reader/xml_reader.h"
-#include "xml_reader/xml_manager.h"
+#include "xml_reader/xml_interface.h"
 
 
 int main()
@@ -10,9 +10,13 @@ int main()
 
     auto manager = std::make_shared<xml_rd::ManagerXML>();
 
+    std::string file;
+    std::cout << "Enter file: ";
+    getline(std::cin, file);
+
     try
     {
-        manager->load_file("/Users/artem/CLionProjects/AVSoft2/data.xml");
+        manager->load_file(file);
     }
     catch (std::invalid_argument& error)
     {

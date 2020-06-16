@@ -1,6 +1,6 @@
 // Created by Ерошев Артём
 
-#include "combiner.h"
+#include "xml_combiner.h"
 
 namespace xml_rd
 {

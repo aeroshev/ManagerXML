@@ -12,9 +12,9 @@ namespace xml_rd
     is_open(false)
     {}
 
-    void ManagerXML::load_file(const std::string &path = "")
+    void ManagerXML::load_file(const std::string &path)
     {
-        this->path = path;
+        this->path = std::filesystem::absolute(path);
         if (!xml_doc.load_file(this->path.c_str()))
             throw std::invalid_argument("Can't read this file");
 
@@ -46,7 +46,7 @@ namespace xml_rd
 			return;
 		}
 
-        double avg_sal = 0;
+        double avg_sal;
         for (const auto& dep : tree)
         {
             avg_sal = 0;
@@ -154,7 +154,6 @@ namespace xml_rd
             }
         }
         xml_doc.save_file(this->path.c_str(), "\t", pugi::format_default, pugi::encoding_utf8);
-        xml_doc.print(std::cout);
     }
 
     void ManagerXML::rollback()
@@ -164,7 +163,6 @@ namespace xml_rd
 			std::cerr << "File don't open" << '\n';
 			return;
 		}
-
         while (pointer_last_record > 1) {
             step_back();
         }
@@ -229,7 +227,6 @@ namespace xml_rd
 			std::cerr << "File don't open" << '\n';
 			return false;
 		}
-
         return tree.end() != tree.find(name);
     }
 }

@@ -25,10 +25,10 @@ add_library(
         xml_reader
         xml_reader/xml_reader.h
         xml_reader/xml_reader.cpp
-        xml_reader/xml_manager.h
-        xml_reader/xml_manager.cpp
-        xml_reader/combiner.h
-        xml_reader/combiner.cpp
+        xml_reader/xml_interface.h
+        xml_reader/xml_interface.cpp
+        xml_reader/xml_combiner.h
+        xml_reader/xml_combiner.cpp
         xml_reader/xml_components.h)
 
 
