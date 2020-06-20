@@ -17,7 +17,7 @@ namespace xml_rd
 	void Interface::start()
 	{
 		unsigned int depth = 0, space = 0;
-		std::string command, op, dep, up;
+		std::string command, op;
 		while(true)
 		{
 			std::cin.clear();
@@ -50,19 +50,21 @@ namespace xml_rd
 			{
 				switch (depth)
 				{
-				case 0:
-				{
-					std::string dep_name;
-					std::cout << "Input name department -> ";
-					getline(std::cin, dep_name);
-					manager->put(std::move(CombineBlock::create_dep(type_operation::write, dep_name, "")));
-					break;
-				}
-				case 1:
-					manager->put(std::move(CombineBlock::create_employ(type_operation::write, current_department)));
-					break;
-				default:
-					std::cerr << "Depth incorrect" << '\n';
+					case 0:
+					{
+						unsigned int pos_f = command.find_first_of('\"') + 1;
+						std::string dep_name = command.substr(pos_f);
+						unsigned  int pos_l = dep_name.find_first_of('\"');
+						dep_name = dep_name.substr(0, pos_l);
+
+						manager->put(std::move(CombineBlock::create_dep(type_operation::write, dep_name, "")));
+						break;
+					}
+					case 1:
+						manager->put(std::move(CombineBlock::create_employ(type_operation::write, current_department)));
+						break;
+					default:
+						std::cerr << "Depth incorrect" << '\n';
 				}
 				continue;
 			}
@@ -73,13 +75,16 @@ namespace xml_rd
 			}
 			else if (op == "cd")
 			{
-				up = command.substr(space);
+				std::string up = command.substr(space);
+				unsigned int dot = up.find_first_not_of(' ');
+				up = up.substr(dot, 2);
 
 				unsigned int start_dep = command.find_first_of('\"') + 1;
 				unsigned int len = command.find_last_of('\"') - start_dep;
-				dep = command.substr(start_dep, len);
+				std::string dep = command.substr(start_dep, len);
 
-				if (up == "..")
+				if (up == ".." && start_dep == 0)
+				{
 					if (depth == 0)
 						std::cerr << "We're the top tree" << '\n';
 					else
@@ -87,72 +92,73 @@ namespace xml_rd
 						depth--;
 						current_department = "";
 					}
-
-				else
-				if (depth == 1)
-					std::cerr << "We're the bottom tree" << '\n';
+				}
 				else
 				{
-					if (manager->exist(dep))
-					{
-						depth++;
-						current_department = dep;
-					}
+					if (depth == 1)
+						std::cerr << "We're the bottom tree" << '\n';
 					else
-						std::cerr << "This department does't exist" << '\n';
+					{
+						if (manager->exist_department(dep))
+						{
+							depth++;
+							current_department = dep;
+						}
+						else
+							std::cerr << "This department does't exist_department" << '\n';
+					}
 				}
 			}
 			else if (op == "rm")
 			{
 				switch (depth)
 				{
-				case 0:
-				{
-					unsigned int start_dep = command.find_first_of('\"') + 1;
-					unsigned int len = command.find_last_of('\"') - start_dep;
-					dep = command.substr(start_dep, len);
+					case 0:
+					{
+						unsigned int start_dep = command.find_first_of('\"') + 1;
+						unsigned int len = command.find_last_of('\"') - start_dep;
+						std::string dep = command.substr(start_dep, len);
 
-					manager->put(std::move(CombineBlock::create_dep(type_operation::erase, "", dep)));
-					break;
-				}
-				case 1:
-					manager->put(std::move(CombineBlock::create_employ(type_operation::erase, current_department)));
-					break;
-				default:
-					std::cerr << "Depth incorrect" << '\n';
+						manager->put(std::move(CombineBlock::create_dep(type_operation::erase, "", dep)));
+						break;
+					}
+					case 1:
+						manager->put(std::move(CombineBlock::create_employ(type_operation::erase, current_department)));
+						break;
+					default:
+						std::cerr << "Depth incorrect" << '\n';
 				}
 			}
 			else if (op == "ch")
 			{
-				// TODO
-				std::string new_name, cur_name;
-				unsigned int pos;
-				try
-				{
-					std::cout << dep << '\n';
-					pos = dep.find('\"') + 1;
-					cur_name = dep.substr(0, pos);
-					cur_name = cur_name.substr(0, cur_name.length() - 1);
-					new_name = dep.substr(pos, dep.find('\"'));
-					new_name = new_name.substr(2, new_name.length());
-				}
-				catch (std::out_of_range& e)
-				{
-					std::cerr << e.what() << '\n';
-					continue;
-				}
-
-
 				switch (depth)
 				{
-				case 0:
-					manager->put(std::move(CombineBlock::create_dep(type_operation::change, new_name, cur_name)));
-					break;
-				case 1:
-					manager->put(std::move(CombineBlock::create_employ(type_operation::change, current_department)));
-					break;
-				default:
-					std::cerr << "Depth incorrect" << '\n';
+					case 0:
+					{
+						// Extract first name
+						// First symbol after "
+						unsigned int pos_f_c = command.find_first_of('\"') + 1;
+						std::string cur_name = command.substr(pos_f_c);
+						// Last symbol before "
+						unsigned int pos_l_c = cur_name.find_first_of('\"');
+						cur_name = cur_name.substr(0, pos_l_c);
+
+						// Extract new name
+						// Last symbol before "
+						unsigned int pos_l_n = command.find_last_of('\"');
+						std::string new_name = command.substr(0, pos_l_n);
+						// First symbol after "
+						unsigned int pos_f_n = new_name.find_last_of('\"') + 1;
+						new_name = new_name.substr(pos_f_n);
+
+						manager->put(std::move(CombineBlock::create_dep(type_operation::change, new_name, cur_name)));
+						break;
+					}
+					case 1:
+						manager->put(std::move(CombineBlock::create_employ(type_operation::change, current_department)));
+						break;
+					default:
+						std::cerr << "Depth incorrect" << '\n';
 				}
 			}
 			else if (op == "man")

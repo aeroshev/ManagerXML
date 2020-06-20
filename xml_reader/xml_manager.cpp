@@ -1,6 +1,6 @@
 // Created by Ерошев Артём
 
-#include "xml_reader.h"
+#include "xml_manager.h"
 
 
 namespace xml_rd
@@ -92,10 +92,20 @@ namespace xml_rd
                 case type_operation::erase:
                     if (box->oldEmploy != nullptr)
                     {
+						if (tree[box->oldNameDepart].find(*box->oldEmploy) == tree[box->oldNameDepart].end())
+						{
+							std::cerr << "Don't exist this employ" << '\n';
+							return;
+						}
                         tree[box->oldNameDepart].erase(*box->oldEmploy);
                     }
                     else
 					{
+						if (tree.find(box->oldNameDepart) == tree.end())
+						{
+							std::cerr << "Don't exist this department" << '\n';
+							return;
+						}
                     	box->old_data = tree[box->oldNameDepart];
                         tree.erase(box->oldNameDepart);
                     }
@@ -104,12 +114,22 @@ namespace xml_rd
                     if (box->oldEmploy != nullptr)
                     {
                         auto emplHandler = tree[box->oldNameDepart].extract(*box->oldEmploy);
+						if (emplHandler.empty())
+						{
+							std::cerr << "Don't exist this employ" << '\n';
+							return;
+						}
                         emplHandler.value() = *box->newEmploy;
                         tree[box->oldNameDepart].insert(std::move(emplHandler));
                     }
                     else
 					{
                         auto nodeHandler = tree.extract(box->oldNameDepart);
+						if (nodeHandler.empty())
+						{
+							std::cerr << "Don't exist this department" << '\n';
+							return;
+						}
                         nodeHandler.key() = box->newNameDepart;
                         tree.insert(std::move(nodeHandler));
                     }
@@ -140,9 +160,11 @@ namespace xml_rd
         xml_doc.append_child("departments");
         pugi::xml_node departments = xml_doc.child("departments");
 
-        for (const auto& dep : tree) {
+        for (const auto& dep : tree)
+        {
             auto department = departments.append_child("department");
             department.append_attribute("name") = dep.first.c_str();
+
             auto employments = department.append_child("employments");
             for (const auto& node : dep.second) {
                 auto employment = employments.append_child("employment");
@@ -163,7 +185,8 @@ namespace xml_rd
 			std::cerr << "File don't open" << '\n';
 			return;
 		}
-        while (pointer_last_record > 1) {
+        while (pointer_last_record > 0)
+        {
             step_back();
         }
     }
@@ -198,7 +221,7 @@ namespace xml_rd
 				{
                     std::copy(tr_unit.old_data.begin(),
                             tr_unit.old_data.end(),
-                            std::inserter(tree[tr_unit.oldNameDepart], tree[tr_unit.oldNameDepart].begin()));
+                            std::inserter(tree[tr_unit.oldNameDepart],tree[tr_unit.oldNameDepart].begin()));
                 }
                 break;
             case type_operation::change:
@@ -220,7 +243,7 @@ namespace xml_rd
         }
     }
 
-    bool ManagerXML::exist(std::string &name)
+    bool ManagerXML::exist_department(std::string &name)
     {
 		if (!is_open)
 		{
@@ -228,5 +251,15 @@ namespace xml_rd
 			return false;
 		}
         return tree.end() != tree.find(name);
+    }
+
+    bool ManagerXML::exist_employ(std::string& department, const XMLEmploy &employ)
+    {
+    	if (!is_open)
+		{
+    		std::cerr << "File don't open" << '\n';
+    		return false;
+		}
+    	return tree[department].end() != tree[department].find(employ);
     }
 }

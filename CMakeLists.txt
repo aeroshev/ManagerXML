@@ -23,8 +23,8 @@ add_library(
         pugixml/pugixml.hpp
         pugixml/pugixml.cpp
         xml_reader
-        xml_reader/xml_reader.h
-        xml_reader/xml_reader.cpp
+        xml_reader/xml_manager.h
+        xml_reader/xml_manager.cpp
         xml_reader/xml_interface.h
         xml_reader/xml_interface.cpp
         xml_reader/xml_combiner.h

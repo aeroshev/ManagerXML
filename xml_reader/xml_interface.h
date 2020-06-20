@@ -1,7 +1,7 @@
 // Created by Ерошев Артём
 
 #pragma once
-#include "xml_reader.h"
+#include "xml_manager.h"
 
 
 namespace xml_rd

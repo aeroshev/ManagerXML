@@ -7,7 +7,6 @@
 namespace xml_rd
 {
 	struct CombineBlock {
-		// TODO Memory handle
 		static std::unique_ptr<XMLBlock> create_employ(type_operation, const std::string&);
 		static std::unique_ptr<XMLBlock> create_dep(type_operation, const std::string&, const std::string&);
 	private:

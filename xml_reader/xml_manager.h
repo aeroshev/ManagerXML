@@ -26,7 +26,8 @@ namespace xml_rd
         void rollback();
         void step_back();
 
-        bool exist(std::string&);
+        bool exist_department(std::string&);
+        bool exist_employ(std::string&, const XMLEmploy&);
     private:
         pugi::xml_document xml_doc;
         std::string path;
