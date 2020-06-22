@@ -31,11 +31,11 @@ namespace xml_rd
     private:
         pugi::xml_document xml_doc;
         std::string path;
-		bool is_open;
+	bool is_open;
 
         std::vector<XMLBlock> cache_;
-		size_t size_cache;
-		unsigned long pointer_last_record;
+	size_t size_cache;
+	unsigned long pointer_last_record;
 
         std::unordered_map<std::string, std::unordered_set<XMLEmploy> > tree;
     };
